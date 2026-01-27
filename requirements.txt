@@ -11,7 +11,7 @@
 # ============================================================================
 
 # Core Django Framework
-Django==6.0.1
+Django
 
 # Django Channels - WebSocket support
 channels==4.0.0
