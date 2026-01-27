@@ -1,0 +1,59 @@
+# ============================================================================
+# Django WebSocket Demo Project - Requirements
+# 
+# This file lists all Python packages required for the project.
+# 
+# Installation:
+#   pip install -r requirements.txt
+# 
+# For production, use:
+#   pip install -r requirements.txt --no-cache-dir
+# ============================================================================
+
+# Core Django Framework
+Django==6.0.1
+
+# Django Channels - WebSocket support
+channels==4.0.0
+
+# ASGI Server - Required for WebSocket support
+daphne==4.0.0
+
+# Async to sync utilities
+asgiref==3.7.1
+
+# REST Framework
+djangorestframework==3.14.0
+
+# JWT Authentication
+djangorestframework-simplejwt==5.3.0
+
+# CORS Support
+django-cors-headers==4.3.1
+
+# API Documentation
+drf-yasg==1.21.7
+
+# For production Redis support (optional)
+channels-redis==4.1.0  # Uncomment for production
+
+# Database drivers (if not using SQLite)
+# psycopg2-binary==2.9.9  # PostgreSQL
+# mysqlclient==2.2.0      # MySQL
+
+# Environment variables
+python-dotenv==1.0.0
+
+# Production server (optional)
+gunicorn==21.2.0
+uvicorn==0.25.0
+
+# Development tools
+pytest==7.4.3
+pytest-django==4.7.0
+pytest-asyncio==0.21.1
+
+# Code quality
+black==23.12.1
+flake8==6.1.0
+isort==5.13.2

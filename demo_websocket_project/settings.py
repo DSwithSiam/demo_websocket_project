@@ -130,10 +130,14 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/6.0/ref/settings/#default-auto-field
+# JWT Authentication Settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),      
+}
+
+
+CHANNEL_LAYERS = {
+  'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}
 }

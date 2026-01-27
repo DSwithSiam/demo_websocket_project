@@ -1,0 +1,392 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Real-time Notifications{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Header -->
+    <div class="col-12 mb-4">
+        <div class="card text-center py-4">
+            <h1 class="display-5 mb-2">🔔 Real-time Notifications</h1>
+            <p class="text-muted mb-0">Receive server-to-client notifications in real-time</p>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="col-lg-8 mx-auto">
+        <!-- Connection Status Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Connection Status</h5>
+                    <span class="status-indicator connected" id="connectionStatus"></span>
+                </div>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">
+                    <strong>Status:</strong> 
+                    <span id="statusText" class="badge bg-success">Connected</span>
+                </p>
+                <p class="mb-0 text-muted">
+                    Listening for notifications...
+                </p>
+            </div>
+        </div>
+
+        <!-- Notifications List -->
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">📨 Notifications</h5>
+            </div>
+            <div class="card-body" id="notificationsContainer" style="max-height: 500px; overflow-y: auto;">
+                <!-- Notifications will appear here -->
+                <div class="text-center text-muted">
+                    <p>No notifications yet. Wait for new updates...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Section -->
+        <div class="card mt-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">📤 Send Test Notification</h5>
+            </div>
+            <div class="card-body">
+                <form id="testNotificationForm">
+                    <div class="mb-3">
+                        <label for="notifTitle" class="form-label">Title</label>
+                        <input 
+                            type="text" 
+                            class="form-control" 
+                            id="notifTitle" 
+                            placeholder="e.g., New Message"
+                            value="Test Notification"
+                        >
+                    </div>
+                    <div class="mb-3">
+                        <label for="notifMessage" class="form-label">Message</label>
+                        <textarea 
+                            class="form-control" 
+                            id="notifMessage" 
+                            rows="3" 
+                            placeholder="Your message here..."
+                        >This is a test notification from the server</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="notifPriority" class="form-label">Priority</label>
+                        <select class="form-select" id="notifPriority">
+                            <option value="low">Low</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-warning">
+                        Send Test Notification
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notification Template (Hidden) -->
+<template id="notificationItemTemplate">
+    <div class="notification-item mb-3 p-3 bg-light rounded border-start" data-priority="normal">
+        <div class="d-flex justify-content-between align-items-start">
+            <div class="flex-grow-1">
+                <h6 class="mb-1" data-title></h6>
+                <p class="mb-2 text-muted" data-message></p>
+                <small class="text-muted" data-timestamp></small>
+            </div>
+            <button type="button" class="btn-close" aria-label="Close"></button>
+        </div>
+    </div>
+</template>
+
+<style>
+    .notification-item {
+        animation: slideIn 0.3s ease-in-out;
+        transition: background-color 0.2s ease;
+    }
+
+    .notification-item:hover {
+        background-color: #e7f3ff !important;
+    }
+
+    .notification-item[data-priority="high"] {
+        border-left-color: #dc3545;
+        background-color: #ffe7e7;
+    }
+
+    .notification-item[data-priority="normal"] {
+        border-left-color: #007bff;
+        background-color: #e7f3ff;
+    }
+
+    .notification-item[data-priority="low"] {
+        border-left-color: #28a745;
+        background-color: #e7f5e8;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    #notificationsContainer {
+        scroll-behavior: smooth;
+    }
+</style>
+
+<!-- JavaScript -->
+<script>
+    /**
+     * ===================================================================
+     * NOTIFICATIONS - WebSocket Client Implementation
+     * ===================================================================
+     * 
+     * This script handles real-time notifications from the server.
+     * 
+     * Functionality:
+     * 1. Connect to WebSocket for notifications
+     * 2. Receive notifications from server
+     * 3. Display notifications with priority levels
+     * 4. Send test notifications
+     * 
+     * ===================================================================
+     */
+
+    // Configuration
+    const config = {
+        wsScheme: '{{ ws_scheme }}',
+        host: '{{ host }}',
+        userId: '{{ user_id }}',
+        debug: true
+    };
+
+    // DOM Elements
+    const elements = {
+        notificationsContainer: document.getElementById('notificationsContainer'),
+        statusText: document.getElementById('statusText'),
+        testForm: document.getElementById('testNotificationForm'),
+        notificationTemplate: document.getElementById('notificationItemTemplate'),
+    };
+
+    // WebSocket Connection
+    let notificationSocket = null;
+    let isConnected = false;
+    let notificationCount = 0;
+
+    /**
+     * Initialize WebSocket connection for notifications
+     */
+    function initializeWebSocket() {
+        try {
+            // Build WebSocket URL for notifications
+            const wsUrl = `${config.wsScheme}://${config.host}/ws/notifications/`;
+
+            log('INFO', 'Connecting to notifications WebSocket', wsUrl);
+
+            // Create WebSocket connection
+            notificationSocket = new WebSocket(wsUrl);
+
+            // ================================================================
+            // WebSocket Event Handlers
+            // ================================================================
+
+            notificationSocket.onopen = function(e) {
+                isConnected = true;
+                updateConnectionStatus(true, 'connectionStatus');
+                elements.statusText.textContent = 'Connected';
+                elements.statusText.className = 'badge bg-success';
+                log('INFO', 'Notifications WebSocket connected');
+                
+                showToast('Connected to notification server', 'success');
+            };
+
+            /**
+             * onmessage: Handle incoming notifications
+             */
+            notificationSocket.onmessage = function(e) {
+                try {
+                    const data = JSON.parse(e.data);
+                    log('DEBUG', 'Notification received', data);
+
+                    switch (data.type) {
+                        case 'notification':
+                            displayNotification(data);
+                            break;
+                        case 'connection_status':
+                            log('INFO', 'Connection status', data);
+                            showToast(data.message, 'info');
+                            break;
+                        default:
+                            log('WARNING', 'Unknown notification type', data.type);
+                    }
+                } catch (error) {
+                    log('ERROR', 'Failed to parse notification', error);
+                }
+            };
+
+            notificationSocket.onclose = function(e) {
+                isConnected = false;
+                updateConnectionStatus(false, 'connectionStatus');
+                elements.statusText.textContent = 'Disconnected';
+                elements.statusText.className = 'badge bg-danger';
+                log('INFO', 'Notifications WebSocket closed');
+                
+                showToast('Disconnected from notification server', 'warning');
+                
+                // Attempt reconnection
+                setTimeout(initializeWebSocket, 3000);
+            };
+
+            notificationSocket.onerror = function(error) {
+                log('ERROR', 'Notifications WebSocket error', error);
+                showToast('Notification connection error', 'error');
+            };
+
+        } catch (error) {
+            log('ERROR', 'Failed to initialize notifications WebSocket', error);
+            showToast('Failed to connect', 'error');
+        }
+    }
+
+    /**
+     * Display notification in the UI
+     * 
+     * Args:
+     *     data (object): Notification data from server
+     */
+    function displayNotification(data) {
+        // Clear placeholder if needed
+        if (elements.notificationsContainer.querySelector('.text-muted')) {
+            elements.notificationsContainer.innerHTML = '';
+        }
+
+        // Clone template
+        const notifEl = elements.notificationTemplate.content.cloneNode(true);
+
+        // Set priority class
+        const priority = data.priority || 'normal';
+        notifEl.querySelector('[data-priority]').setAttribute('data-priority', priority);
+
+        // Set content
+        notifEl.querySelector('[data-title]').textContent = data.title || 'Notification';
+        notifEl.querySelector('[data-message]').textContent = data.message || '';
+        notifEl.querySelector('[data-timestamp]').textContent = new Date().toLocaleTimeString();
+
+        // Add close button handler
+        notifEl.querySelector('.btn-close').addEventListener('click', function() {
+            this.closest('.notification-item').remove();
+        });
+
+        // Add to container
+        elements.notificationsContainer.appendChild(notifEl);
+
+        // Scroll to bottom
+        elements.notificationsContainer.scrollTop = elements.notificationsContainer.scrollHeight;
+
+        notificationCount++;
+        log('DEBUG', `Notification displayed (Total: ${notificationCount})`);
+
+        // Show toast
+        showToast(`${data.title}: ${data.message}`, 'info', 5000);
+    }
+
+    /**
+     * Send test notification via HTTP API
+     */
+    async function sendTestNotification() {
+        try {
+            const title = document.getElementById('notifTitle').value.trim();
+            const message = document.getElementById('notifMessage').value.trim();
+            const priority = document.getElementById('notifPriority').value;
+
+            if (!title || !message) {
+                showToast('Please fill in all fields', 'warning');
+                return;
+            }
+
+            // Send to API endpoint
+            const response = await fetch('{% url "core:send_notification" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+                body: JSON.stringify({
+                    title: title,
+                    message: message,
+                    priority: priority
+                })
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                showToast('Test notification sent!', 'success');
+                log('INFO', 'Test notification sent', result);
+            } else {
+                showToast('Failed to send notification', 'error');
+            }
+
+        } catch (error) {
+            log('ERROR', 'Failed to send test notification', error);
+            showToast('Error sending notification', 'error');
+        }
+    }
+
+    /**
+     * Get CSRF token from cookies
+     */
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    /**
+     * Setup event listeners
+     */
+    function setupEventListeners() {
+        elements.testForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            sendTestNotification();
+        });
+    }
+
+    /**
+     * Initialize on page load
+     */
+    document.addEventListener('DOMContentLoaded', function() {
+        log('INFO', 'Initializing notifications page');
+        setupEventListeners();
+        initializeWebSocket();
+    });
+
+    /**
+     * Cleanup on page unload
+     */
+    window.addEventListener('beforeunload', function() {
+        if (notificationSocket) {
+            notificationSocket.close();
+        }
+    });
+</script>
+{% endblock %}

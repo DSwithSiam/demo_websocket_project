@@ -1,0 +1,142 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Chat Rooms{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Header -->
+    <div class="col-12 mb-4">
+        <div class="card text-center py-4">
+            <h1 class="display-5 mb-2">💬 Chat Rooms</h1>
+            <p class="text-muted mb-0">Select a room to start real-time chatting</p>
+        </div>
+    </div>
+
+    <!-- Chat Rooms Grid -->
+    {% for room in rooms %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100 hover-card">
+            <!-- Room Header -->
+            <div class="card-header bg-gradient text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-chat-left"></i> {{ room.name|title }}
+                </h5>
+            </div>
+
+            <!-- Room Body -->
+            <div class="card-body d-flex flex-column">
+                <p class="card-text text-muted flex-grow-1">
+                    {{ room.description }}
+                </p>
+
+                <!-- Room Info -->
+                <div class="mb-3 p-3 bg-light rounded">
+                    <small class="text-muted">
+                        <strong>Room:</strong> {{ room.name }}<br>
+                        <strong>Users:</strong> 
+                        <span class="badge bg-primary">0</span>
+                    </small>
+                </div>
+            </div>
+
+            <!-- Room Footer -->
+            <div class="card-footer bg-light text-center">
+                <a href="{% url 'core:chat_room' room.name %}" class="btn btn-primary">
+                    Enter Room →
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- How to Use Section -->
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">📝 How to Use Chat</h5>
+            </div>
+            <div class="card-body">
+                <ol>
+                    <li>Click on any room to enter</li>
+                    <li>Enter your username</li>
+                    <li>Start typing messages</li>
+                    <li>Messages are broadcast to all users in the room in real-time</li>
+                    <li>See user join/leave notifications automatically</li>
+                </ol>
+
+                <!-- Code Example -->
+                <h6 class="mt-4 fw-bold">Example: Sending a Message</h6>
+                <pre class="bg-dark text-light p-3 rounded"><code>{
+    "type": "chat_message",
+    "message": "Hello everyone!",
+    "username": "john_doe"
+}</code></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Technical Details -->
+<div class="row mt-4 mb-5">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">🔧 Features</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">✓ Multiple chat rooms</li>
+                    <li class="mb-2">✓ Real-time message delivery</li>
+                    <li class="mb-2">✓ User join/leave notifications</li>
+                    <li class="mb-2">✓ Message history</li>
+                    <li class="mb-2">✓ Concurrent users support</li>
+                    <li class="mb-2">✓ Message validation</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">📊 Architecture</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">
+                    <strong>Client → Server:</strong><br>
+                    <code>WebSocket → Django Channels → Consumer</code>
+                </p>
+                <p class="mb-3">
+                    <strong>Server → Clients:</strong><br>
+                    <code>Consumer → Channel Layer → Group → Clients</code>
+                </p>
+                <p>
+                    <strong>Communication:</strong><br>
+                    <code>AsyncWebsocketConsumer with Channel Groups</code>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .hover-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .hover-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .bg-gradient {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .card-header {
+        border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}

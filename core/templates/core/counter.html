@@ -1,0 +1,447 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Real-time Counter{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Header -->
+    <div class="col-12 mb-4">
+        <div class="card text-center py-4">
+            <h1 class="display-5 mb-2">📊 Synchronized Counter</h1>
+            <p class="text-muted mb-0">Real-time counter synchronized across all connected users</p>
+        </div>
+    </div>
+
+    <!-- Counter Display -->
+    <div class="col-lg-6 mx-auto mb-4">
+        <div class="card">
+            <!-- Connection Status -->
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Connection Status</h5>
+                    <span class="status-indicator connected" id="connectionStatus"></span>
+                </div>
+            </div>
+
+            <!-- Counter Display -->
+            <div class="card-body text-center">
+                <div class="display-1 fw-bold text-primary mb-4" id="counterDisplay">
+                    0
+                </div>
+                
+                <p class="text-muted mb-3">
+                    <strong id="statusText" class="badge bg-success">Connected</strong>
+                </p>
+
+                <!-- Action Buttons -->
+                <div class="d-flex gap-2 justify-content-center mb-3">
+                    <!-- Decrement Button -->
+                    <button class="btn btn-danger btn-lg" onclick="decrementCounter()">
+                        <i class="bi bi-dash-circle"></i> Decrease
+                    </button>
+
+                    <!-- Reset Button -->
+                    <button class="btn btn-warning btn-lg" onclick="resetCounter()">
+                        <i class="bi bi-arrow-clockwise"></i> Reset
+                    </button>
+
+                    <!-- Increment Button -->
+                    <button class="btn btn-success btn-lg" onclick="incrementCounter()">
+                        <i class="bi bi-plus-circle"></i> Increase
+                    </button>
+                </div>
+
+                <!-- Custom Value Input -->
+                <div class="input-group">
+                    <input 
+                        type="number" 
+                        class="form-control" 
+                        id="customValue" 
+                        placeholder="Enter custom value"
+                        value="1"
+                    >
+                    <button class="btn btn-info" onclick="addCustomValue()">
+                        Add
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Section -->
+    <div class="col-lg-6 mx-auto mb-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">📈 Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted">Total Actions</h6>
+                        <h4 class="text-primary" id="actionCount">0</h4>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted">Connected Users</h6>
+                        <h4 class="text-success" id="userCount">1</h4>
+                    </div>
+                </div>
+
+                <!-- Activity Log -->
+                <h6 class="mt-4 mb-3 fw-bold">Recent Activity</h6>
+                <div id="activityLog" style="max-height: 200px; overflow-y: auto;">
+                    <small class="text-muted">No activity yet...</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Information Cards -->
+    <div class="col-12">
+        <div class="row">
+            <!-- How It Works -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">⚙️ How It Works</h5>
+                    </div>
+                    <div class="card-body">
+                        <ol class="small">
+                            <li>All users connect to same counter via WebSocket</li>
+                            <li>When you change counter, message sent to server</li>
+                            <li>Server broadcasts update to all connected clients</li>
+                            <li>All clients display same counter value</li>
+                            <li>Synchronization happens in real-time</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Use Cases -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">💡 Use Cases</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled small">
+                            <li class="mb-2">✓ Active user counter</li>
+                            <li class="mb-2">✓ Live statistics dashboard</li>
+                            <li class="mb-2">✓ Inventory tracking</li>
+                            <li class="mb-2">✓ Real-time metrics</li>
+                            <li class="mb-2">✓ Stock ticker</li>
+                            <li class="mb-2">✓ Collaborative counting</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Activity Log Template -->
+<template id="activityTemplate">
+    <div class="activity-item mb-2 p-2 bg-light rounded">
+        <div class="d-flex justify-content-between">
+            <span data-action></span>
+            <small class="text-muted" data-time></small>
+        </div>
+    </div>
+</template>
+
+<style>
+    .display-1 {
+        font-size: 4rem;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        animation: counterUpdate 0.3s ease-in-out;
+    }
+
+    @keyframes counterUpdate {
+        0% {
+            transform: scale(0.9);
+            opacity: 0.7;
+        }
+        50% {
+            transform: scale(1.1);
+        }
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    .btn-lg {
+        min-width: 120px;
+    }
+
+    .activity-item {
+        animation: slideIn 0.3s ease-in-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+<!-- JavaScript -->
+<script>
+    /**
+     * ===================================================================
+     * COUNTER - Synchronized Real-time Counter
+     * ===================================================================
+     * 
+     * This demonstrates:
+     * 1. Real-time state synchronization
+     * 2. Broadcasting to all connected clients
+     * 3. User interaction handling
+     * 4. Activity tracking
+     * 
+     * ===================================================================
+     */
+
+    // Configuration
+    const config = {
+        wsScheme: '{{ ws_scheme }}',
+        host: '{{ host }}',
+        debug: true
+    };
+
+    // State
+    const state = {
+        counter: 0,
+        actionCount: 0,
+        userCount: 1,
+        isConnected: false
+    };
+
+    // DOM Elements
+    const elements = {
+        counterDisplay: document.getElementById('counterDisplay'),
+        statusText: document.getElementById('statusText'),
+        actionCount: document.getElementById('actionCount'),
+        userCount: document.getElementById('userCount'),
+        activityLog: document.getElementById('activityLog'),
+        activityTemplate: document.getElementById('activityTemplate'),
+        customValue: document.getElementById('customValue'),
+    };
+
+    // WebSocket Connection
+    let counterSocket = null;
+
+    /**
+     * Initialize WebSocket connection
+     */
+    function initializeWebSocket() {
+        try {
+            const wsUrl = `${config.wsScheme}://${config.host}/ws/counter/`;
+            log('INFO', 'Connecting to counter WebSocket', wsUrl);
+
+            counterSocket = new WebSocket(wsUrl);
+
+            counterSocket.onopen = function(e) {
+                state.isConnected = true;
+                updateConnectionStatus(true, 'connectionStatus');
+                elements.statusText.textContent = 'Connected';
+                elements.statusText.className = 'badge bg-success';
+                log('INFO', 'Counter WebSocket connected');
+                
+                showToast('Connected to counter server', 'success');
+            };
+
+            /**
+             * Handle incoming counter updates
+             */
+            counterSocket.onmessage = function(e) {
+                try {
+                    const data = JSON.parse(e.data);
+                    log('DEBUG', 'Counter message received', data);
+
+                    switch (data.type) {
+                        case 'counter_update':
+                            handleCounterUpdate(data);
+                            break;
+                        case 'user_count_update':
+                            handleUserCountUpdate(data);
+                            break;
+                        default:
+                            log('WARNING', 'Unknown message type', data.type);
+                    }
+                } catch (error) {
+                    log('ERROR', 'Failed to parse counter message', error);
+                }
+            };
+
+            counterSocket.onclose = function(e) {
+                state.isConnected = false;
+                updateConnectionStatus(false, 'connectionStatus');
+                elements.statusText.textContent = 'Disconnected';
+                elements.statusText.className = 'badge bg-danger';
+                log('INFO', 'Counter WebSocket closed');
+                
+                showToast('Disconnected from counter server', 'warning');
+                
+                // Reconnect after 3 seconds
+                setTimeout(initializeWebSocket, 3000);
+            };
+
+            counterSocket.onerror = function(error) {
+                log('ERROR', 'Counter WebSocket error', error);
+                showToast('Connection error', 'error');
+            };
+
+        } catch (error) {
+            log('ERROR', 'Failed to initialize counter WebSocket', error);
+            showToast('Failed to connect', 'error');
+        }
+    }
+
+    /**
+     * Handle counter update from server
+     */
+    function handleCounterUpdate(data) {
+        const action = data.action || 'update';
+        const value = data.value || 0;
+
+        // Update counter based on action
+        switch (action) {
+            case 'increment':
+                state.counter += value;
+                logActivity(`Incremented by ${value}`);
+                break;
+            case 'decrement':
+                state.counter -= value;
+                logActivity(`Decremented by ${value}`);
+                break;
+            case 'reset':
+                state.counter = 0;
+                logActivity('Counter reset');
+                break;
+            default:
+                state.counter = value;
+                logActivity(`Set to ${value}`);
+        }
+
+        state.actionCount++;
+        updateDisplay();
+
+        log('DEBUG', 'Counter updated', { counter: state.counter, action });
+    }
+
+    /**
+     * Handle user count update
+     */
+    function handleUserCountUpdate(data) {
+        state.userCount = data.count;
+        elements.userCount.textContent = state.userCount;
+    }
+
+    /**
+     * Send counter action to server
+     */
+    function sendCounterAction(action, value = 1) {
+        if (!state.isConnected) {
+            showToast('Not connected', 'warning');
+            return;
+        }
+
+        try {
+            const message = {
+                action: action,
+                value: value
+            };
+
+            counterSocket.send(JSON.stringify(message));
+            log('INFO', 'Counter action sent', message);
+
+        } catch (error) {
+            log('ERROR', 'Failed to send action', error);
+            showToast('Failed to send action', 'error');
+        }
+    }
+
+    /**
+     * Counter actions
+     */
+    function incrementCounter() {
+        sendCounterAction('increment', 1);
+    }
+
+    function decrementCounter() {
+        sendCounterAction('decrement', 1);
+    }
+
+    function resetCounter() {
+        if (confirm('Are you sure you want to reset the counter?')) {
+            sendCounterAction('reset', 0);
+        }
+    }
+
+    function addCustomValue() {
+        const value = parseInt(elements.customValue.value) || 1;
+        if (value !== 0) {
+            sendCounterAction('increment', value);
+        }
+    }
+
+    /**
+     * Update display
+     */
+    function updateDisplay() {
+        // Animate counter update
+        elements.counterDisplay.style.animation = 'none';
+        setTimeout(() => {
+            elements.counterDisplay.textContent = state.counter;
+            elements.counterDisplay.style.animation = 'counterUpdate 0.3s ease-in-out';
+        }, 10);
+
+        // Update action count
+        elements.actionCount.textContent = state.actionCount;
+    }
+
+    /**
+     * Log activity
+     */
+    function logActivity(message) {
+        // Clear placeholder
+        if (elements.activityLog.querySelector('.text-muted')) {
+            elements.activityLog.innerHTML = '';
+        }
+
+        // Create activity item
+        const item = elements.activityTemplate.content.cloneNode(true);
+        item.querySelector('[data-action]').textContent = message;
+        item.querySelector('[data-time]').textContent = new Date().toLocaleTimeString();
+
+        // Add to top
+        elements.activityLog.insertBefore(item, elements.activityLog.firstChild);
+
+        // Keep only last 10 items
+        while (elements.activityLog.children.length > 10) {
+            elements.activityLog.removeChild(elements.activityLog.lastChild);
+        }
+    }
+
+    /**
+     * Initialize on page load
+     */
+    document.addEventListener('DOMContentLoaded', function() {
+        log('INFO', 'Initializing counter page');
+        initializeWebSocket();
+    });
+
+    /**
+     * Cleanup on page unload
+     */
+    window.addEventListener('beforeunload', function() {
+        if (counterSocket) {
+            counterSocket.close();
+        }
+    });
+</script>
+{% endblock %}

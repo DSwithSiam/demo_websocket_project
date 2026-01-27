@@ -1,0 +1,183 @@
+{% extends 'core/base.html' %}
+
+{% block title %}WebSocket Demos{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Header -->
+    <div class="col-12 mb-5">
+        <div class="card text-center py-5">
+            <h1 class="display-4 mb-3">🔌 WebSocket Real-time Demos</h1>
+            <p class="lead text-muted mb-0">
+                Explore real-time communication using WebSocket technology
+            </p>
+        </div>
+    </div>
+
+    <!-- Demo Cards -->
+    {% for demo in demos %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100 hover-shadow">
+            <!-- Card Header -->
+            <div class="card-header bg-primary text-white text-center">
+                <h3 class="card-title mb-0">{{ demo.name }}</h3>
+            </div>
+
+            <!-- Card Body -->
+            <div class="card-body">
+                <p class="card-text text-muted">{{ demo.description }}</p>
+                
+                <!-- Features List -->
+                <h6 class="mt-3 mb-2 fw-bold">Features:</h6>
+                <ul class="list-unstyled">
+                    {% for feature in demo.features %}
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        <span>{{ feature }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- Card Footer -->
+            <div class="card-footer bg-light text-center">
+                <a href="{{ demo.url }}" class="btn btn-primary btn-sm">
+                    View Demo →
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Information Section -->
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">📚 What are WebSockets?</h5>
+            </div>
+            <div class="card-body">
+                <p>
+                    WebSockets provide a persistent, bidirectional communication channel between 
+                    client and server. Unlike HTTP, which is request-response based, WebSockets 
+                    maintain an open connection allowing real-time data exchange.
+                </p>
+                
+                <h6 class="mt-3 fw-bold">Key Benefits:</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul>
+                            <li>Real-time communication</li>
+                            <li>Lower latency</li>
+                            <li>Bidirectional data flow</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul>
+                            <li>Persistent connection</li>
+                            <li>Reduced bandwidth</li>
+                            <li>Event-driven architecture</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <h6 class="mt-3 fw-bold">Common Use Cases:</h6>
+                <p>
+                    Chat applications, live notifications, real-time dashboards, 
+                    collaborative editing, live streaming, multiplayer games
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Technology Stack -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">⚙️ Technology Stack</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6 class="fw-bold">Backend</h6>
+                        <ul class="list-unstyled">
+                            <li>✓ Django 6.0+</li>
+                            <li>✓ Django Channels</li>
+                            <li>✓ Daphne ASGI Server</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="fw-bold">Frontend</h6>
+                        <ul class="list-unstyled">
+                            <li>✓ WebSocket API</li>
+                            <li>✓ Bootstrap 5</li>
+                            <li>✓ Vanilla JavaScript</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="fw-bold">Infrastructure</h6>
+                        <ul class="list-unstyled">
+                            <li>✓ Channel Layers</li>
+                            <li>✓ Redis (optional)</li>
+                            <li>✓ Routing</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Documentation Links -->
+<div class="row mt-4 mb-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">📖 Documentation & Resources</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        <a href="https://channels.readthedocs.io/" target="_blank">
+                            Django Channels Documentation
+                        </a>
+                    </li>
+                    <li class="list-group-item">
+                        <a href="https://docs.djangoproject.com/" target="_blank">
+                            Django Documentation
+                        </a>
+                    </li>
+                    <li class="list-group-item">
+                        <a href="https://developer.mozilla.org/en-US/docs/Web/API/WebSocket" target="_blank">
+                            WebSocket API - MDN Web Docs
+                        </a>
+                    </li>
+                    <li class="list-group-item">
+                        <a href="https://tools.ietf.org/html/rfc6455" target="_blank">
+                            WebSocket Protocol RFC 6455
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .hover-shadow {
+        transition: box-shadow 0.3s ease, transform 0.3s ease;
+    }
+    
+    .hover-shadow:hover {
+        box-shadow: 0 12px 20px rgba(0, 0, 0, 0.2);
+        transform: translateY(-5px);
+    }
+    
+    .card-header {
+        border-bottom: 3px solid rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}

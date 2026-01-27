@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- ================================================================
+         WebSocket Demo - Base Template
+         
+         This is the base template that contains common HTML structure
+         and CSS styles for all pages.
+         
+         Documentation:
+         - Django Templates: https://docs.djangoproject.com/en/6.0/topics/templates/
+         - Bootstrap: https://getbootstrap.com/docs/5.0/
+         ================================================================ -->
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}WebSocket Demo{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Custom Styles -->
+    <style>
+        /* Global Styles */
+        :root {
+            --primary-color: #007bff;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.5rem;
+            color: #fff !important;
+        }
+        
+        .container-main {
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .btn {
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .badge {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+        }
+        
+        .footer {
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 2rem;
+            margin-top: 3rem;
+            text-align: center;
+        }
+        
+        /* Status Indicator */
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-indicator.connected {
+            background-color: #28a745;
+            box-shadow: 0 0 10px rgba(40, 167, 69, 0.7);
+        }
+        
+        .status-indicator.disconnected {
+            background-color: #dc3545;
+            box-shadow: 0 0 10px rgba(220, 53, 69, 0.7);
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 10px currentColor;
+            }
+            50% {
+                box-shadow: 0 0 20px currentColor;
+            }
+            100% {
+                box-shadow: 0 0 10px currentColor;
+            }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'core:index' %}">
+                🔌 WebSocket Demo
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:index' %}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:chat_list' %}">Chat</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:notifications' %}">Notifications</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'core:counter' %}">Counter</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <div class="container-fluid container-main">
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2025 WebSocket Demo Project. All rights reserved.</p>
+        <p>Built with Django, Django Channels, and WebSocket API</p>
+    </footer>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Common JavaScript -->
+    <script>
+        /**
+         * Common utility functions for WebSocket demos
+         */
+        
+        // Log levels: DEBUG, INFO, WARNING, ERROR
+        const LOG_LEVEL = 'DEBUG';
+        
+        /**
+         * Log messages with timestamps
+         * @param {string} level - Log level
+         * @param {string} message - Message to log
+         * @param {any} data - Additional data
+         */
+        function log(level, message, data = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = `[${timestamp}] ${level}:`;
+            
+            if (data) {
+                console.log(prefix, message, data);
+            } else {
+                console.log(prefix, message);
+            }
+        }
+        
+        /**
+         * Show notification toast
+         * @param {string} message - Message to show
+         * @param {string} type - Type (success, error, info, warning)
+         * @param {number} duration - Duration in milliseconds
+         */
+        function showToast(message, type = 'info', duration = 3000) {
+            const alertClass = {
+                'success': 'alert-success',
+                'error': 'alert-danger',
+                'info': 'alert-info',
+                'warning': 'alert-warning'
+            }[type] || 'alert-info';
+            
+            const alertHtml = `
+                <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            const alertContainer = document.createElement('div');
+            alertContainer.className = 'position-fixed top-0 start-50 translate-middle-x mt-3';
+            alertContainer.style.zIndex = '9999';
+            alertContainer.innerHTML = alertHtml;
+            
+            document.body.appendChild(alertContainer);
+            
+            // Auto remove after duration
+            setTimeout(() => {
+                alertContainer.remove();
+            }, duration);
+        }
+        
+        /**
+         * Update connection status indicator
+         * @param {boolean} connected - Connection status
+         * @param {string} elementId - ID of status element
+         */
+        function updateConnectionStatus(connected, elementId = 'connectionStatus') {
+            const statusEl = document.getElementById(elementId);
+            if (statusEl) {
+                statusEl.classList.toggle('connected', connected);
+                statusEl.classList.toggle('disconnected', !connected);
+                statusEl.textContent = connected ? 'Connected' : 'Disconnected';
+            }
+        }
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

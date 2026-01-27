@@ -1,8 +1,12 @@
 """
 URL configuration for demo_websocket_project project.
 
+This is the main URL configuration that routes all incoming requests to
+appropriate app URL configurations and views.
+
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/6.0/topics/http/urls/
+
 Examples:
 Function views
     1. Add an import:  from my_app import views
@@ -14,9 +18,22 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
+
+# ============================================================================
+# URL PATTERNS
+# ============================================================================
+# Master URL configuration - all app URLs are included here
+# ============================================================================
 
 urlpatterns = [
+    # Admin panel
     path('admin/', admin.site.urls),
+    
+    # Core app URLs (WebSocket demos)
+    # All URLs starting with '/' are routed to core/urls.py
+    path('', include('core.urls')),
 ]
+
