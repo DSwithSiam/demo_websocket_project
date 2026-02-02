@@ -47,7 +47,11 @@ INSTALLED_APPS += [
     'drf_yasg',       # for API documentation
     'channels',       # for Django Channels
     'core',           # project app
+    'accounts',       # custom accounts app
 ]
+
+# Custom User Model
+AUTH_USER_MODEL = 'accounts.CustomUser'
 
 
 
@@ -58,6 +62,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'accounts.middleware.UserActivityMiddleware',  # Custom middleware for user activity tracking
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]

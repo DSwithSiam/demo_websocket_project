@@ -24,9 +24,13 @@ from channels.db import database_sync_to_async
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 import logging
+from .models import ChatMessage
+from django.contrib.auth import get_user_model
 
 # Configure logging for debugging
 logger = logging.getLogger(__name__)
+
+User = get_user_model()
 
 # ============================================================================
 # CHAT CONSUMER - Multi-user Chat Room Example
@@ -63,6 +67,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
         3. Accept the WebSocket connection
         4. Send notification to other users
         """
+        # Reject connection if user is not authenticated
+        user = self.scope.get('user')
+        if not user or not user.is_authenticated:
+            await self.close(code=4001)
+            return
+
         # Extract room name from WebSocket URL
         # URL format: ws://localhost/ws/chat/{room_name}/
         self.room_name = self.scope['url_route']['kwargs']['room_name']
@@ -127,7 +137,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
         Actions:
         1. Parse incoming JSON message
         2. Validate message content
-        3. Broadcast message to all users in the room
+        3. Save message to database (chat history)
+        4. Broadcast message to all users in the room
         
         Args:
             text_data (str): JSON-encoded message from client
@@ -137,6 +148,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             data = json.loads(text_data)
             message = data.get('message', '')
             username = data.get('username', 'Anonymous')
+            user_id = data.get('user_id', None)
             
             # Validate message
             if not message or len(message) > 1000:
@@ -145,6 +157,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'message': 'Invalid message'
                 }))
                 return
+            
+            # Save message to database (chat history)
+            await self.save_message(
+                room_name=self.room_name,
+                user_id=user_id,
+                username=username,
+                message=message
+            )
             
             # Broadcast message to all users in the room
             await self.channel_layer.group_send(
@@ -172,6 +192,36 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'type': 'error',
                 'message': 'Server error occurred'
             }))
+    
+    @database_sync_to_async
+    def save_message(self, room_name, user_id, username, message):
+        """
+        Save chat message to database for chat history.
+        
+        Args:
+            room_name (str): Name of the chat room
+            user_id (int): ID of the user (optional)
+            username (str): Username of the sender
+            message (str): Message content
+        """
+        try:
+            user = None
+            if user_id:
+                try:
+                    user = User.objects.get(id=user_id)
+                except User.DoesNotExist:
+                    logger.warning(f"User with id {user_id} not found")
+            
+            # Save message to database
+            ChatMessage.objects.create(
+                room_name=room_name,
+                user=user,
+                user_name=username,
+                message=message
+            )
+            logger.info(f"Message saved to database: {username} in {room_name}")
+        except Exception as e:
+            logger.error(f"Error saving message to database: {str(e)}")
     
     async def chat_message(self, event):
         """
@@ -241,8 +291,14 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         """
         Accept WebSocket connection and add to notification group.
         """
-        # Get user ID from query parameters or session
-        self.user_id = self.scope.get('query_string', b'').decode()
+        # Reject connection if user is not authenticated
+        user = self.scope.get('user')
+        if not user or not user.is_authenticated:
+            await self.close(code=4001)
+            return
+
+        # Get user ID from authenticated user
+        self.user_id = str(user.id)
         
         # Create group name for this user's notifications
         self.notification_group = f'notifications_{self.user_id or "public"}'
@@ -321,6 +377,12 @@ class CounterConsumer(AsyncWebsocketConsumer):
         """
         Connect to counter group and send current counter value.
         """
+        # Reject connection if user is not authenticated
+        user = self.scope.get('user')
+        if not user or not user.is_authenticated:
+            await self.close(code=4001)
+            return
+
         # Add to global counter group
         await self.channel_layer.group_add(
             self.counter_group,

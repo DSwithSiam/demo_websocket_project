@@ -1,246 +1,358 @@
 """
-WebSocket Views Module
+Core App API Views
 
-This module contains Django views for rendering WebSocket demo pages.
-Each view serves an HTML page that demonstrates a specific WebSocket use case.
-
-Documentation:
-- Django Views: https://docs.djangoproject.com/en/6.0/topics/http/views/
-- Django Templates: https://docs.djangoproject.com/en/6.0/topics/templates/
-
-Author: WebSocket Demo Project
+This module contains REST API endpoints for WebSocket chat application.
+Pure API views with Swagger documentation.
 """
 
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.views import View
-from django.views.decorators.http import require_http_methods
-from django.utils.decorators import method_decorator
-import json
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.response import Response
+from rest_framework import status
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+
+from .models import Chat, ChatMessage
 
 
 # ============================================================================
-# CHAT ROOM VIEW
-# ============================================================================
-# View for displaying the chat room interface
+# CHAT ROOM API ENDPOINTS
 # ============================================================================
 
-def chat_room_list(request):
-    """
-    View to display list of available chat rooms.
-    
-    This view shows all available chat rooms and allows users to join them.
-    
-    Args:
-        request: Django HTTP request object
-        
-    Returns:
-        Rendered HTML template with list of chat rooms
-    """
-    # List of demo chat rooms
-    rooms = [
-        {'name': 'general', 'description': 'General discussion room'},
-        {'name': 'tech', 'description': 'Technology discussions'},
-        {'name': 'random', 'description': 'Random chit-chat'},
-    ]
-    
-    context = {
-        'rooms': rooms,
-        'page_title': 'Chat Rooms',
-    }
-    
-    return render(request, 'core/chat_room_list.html', context)
-
-
-def chat_room(request, room_name):
-    """
-    View to display a specific chat room.
-    
-    This view renders the chat interface for a specific room.
-    Users will connect to this room via WebSocket from this page.
-    
-    Args:
-        request: Django HTTP request object
-        room_name (str): Name of the chat room
-        
-    Returns:
-        Rendered HTML template for the chat room
-    """
-    context = {
-        'room_name': room_name,
-        'page_title': f'Chat Room - {room_name}',
-        'ws_scheme': 'wss' if request.is_secure() else 'ws',
-        'host': request.get_host(),
-    }
-    
-    return render(request, 'core/chat_room.html', context)
-
-
-# ============================================================================
-# NOTIFICATION VIEW
-# ============================================================================
-# View for displaying real-time notifications
-# ============================================================================
-
-def notifications_page(request):
-    """
-    View to display notifications interface.
-    
-    This page demonstrates real-time notifications from server to client.
-    Users connect via WebSocket to receive updates.
-    
-    Args:
-        request: Django HTTP request object
-        
-    Returns:
-        Rendered HTML template for notifications
-    """
-    context = {
-        'page_title': 'Real-time Notifications',
-        'ws_scheme': 'wss' if request.is_secure() else 'ws',
-        'host': request.get_host(),
-        'user_id': request.user.id if request.user.is_authenticated else 'guest',
-    }
-    
-    return render(request, 'core/notifications.html', context)
-
-
-# ============================================================================
-# COUNTER VIEW
-# ============================================================================
-# View for displaying real-time counter
-# ============================================================================
-
-def counter_page(request):
-    """
-    View to display real-time counter interface.
-    
-    This page demonstrates synchronized real-time counter across all users.
-    
-    Args:
-        request: Django HTTP request object
-        
-    Returns:
-        Rendered HTML template for counter
-    """
-    context = {
-        'page_title': 'Real-time Counter',
-        'ws_scheme': 'wss' if request.is_secure() else 'ws',
-        'host': request.get_host(),
-    }
-    
-    return render(request, 'core/counter.html', context)
-
-
-# ============================================================================
-# API ENDPOINT VIEWS
-# ============================================================================
-# Views for REST API endpoints used by WebSocket demos
-# ============================================================================
-
-class SendNotificationView(View):
-    """
-    View to manually send notifications to users.
-    
-    This is a demo endpoint that allows sending notifications via HTTP,
-    which are then broadcasted to connected WebSocket clients.
-    
-    Usage:
-        POST /api/notifications/send/
-        {
-            "title": "New Message",
-            "message": "You have a new message",
-            "priority": "high"
-        }
-    """
-    
-    @method_decorator(require_http_methods(["POST"]))
-    def post(self, request):
-        """
-        Handle POST request to send notification.
-        
-        Args:
-            request: Django HTTP request with JSON body
-            
-        Returns:
-            JsonResponse with status and message
-        """
-        try:
-            # Parse JSON request body
-            data = json.loads(request.body)
-            
-            # Validate required fields
-            title = data.get('title', '')
-            message = data.get('message', '')
-            priority = data.get('priority', 'normal')
-            
-            if not title or not message:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'Title and message are required'
-                }, status=400)
-            
-            # In a real application, you would broadcast this via channels
-            # For now, we just return success
-            return JsonResponse({
-                'status': 'success',
-                'message': 'Notification sent',
-                'data': {
-                    'title': title,
-                    'message': message,
-                    'priority': priority
+@swagger_auto_schema(
+    method='get',
+    operation_description="Get list of all chat rooms",
+    responses={
+        200: openapi.Response(
+            description="List of chat rooms",
+            examples={
+                "application/json": {
+                    "count": 2,
+                    "rooms": [
+                        {"room_name": "general", "message_count": 10},
+                        {"room_name": "tech", "message_count": 5}
+                    ]
                 }
-            })
-            
-        except json.JSONDecodeError:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Invalid JSON format'
-            }, status=400)
-        except Exception as e:
-            return JsonResponse({
-                'status': 'error',
-                'message': str(e)
-            }, status=500)
-
-
-@require_http_methods(["GET"])
-def websocket_demo_index(request):
+            }
+        )
+    },
+    tags=['Chat Rooms']
+)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def list_chat_rooms(request):
     """
-    Main WebSocket demo index page.
-    
-    Shows overview of all WebSocket demos available.
-    
-    Args:
-        request: Django HTTP request object
+    Get list of all available chat rooms with message counts.
+    """
+    try:
+        # Get distinct room names from ChatMessage
+        rooms = ChatMessage.objects.values('room_name').distinct()
         
-    Returns:
-        Rendered HTML template with demo index
+        room_data = []
+        for room in rooms:
+            room_name = room['room_name']
+            message_count = ChatMessage.objects.filter(room_name=room_name).count()
+            last_message = ChatMessage.objects.filter(room_name=room_name).order_by('-timestamp').first()
+            
+            room_data.append({
+                'room_name': room_name,
+                'message_count': message_count,
+                'last_message_time': last_message.timestamp.isoformat() if last_message else None
+            })
+        
+        return Response({
+            'count': len(room_data),
+            'rooms': room_data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='post',
+    operation_description="Create a new chat room",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['room_name'],
+        properties={
+            'room_name': openapi.Schema(
+                type=openapi.TYPE_STRING, 
+                description='Name of the chat room',
+                example='general'
+            ),
+            'initial_message': openapi.Schema(
+                type=openapi.TYPE_STRING, 
+                description='Optional initial message',
+                example='Welcome to the room!'
+            )
+        }
+    ),
+    responses={
+        201: openapi.Response(
+            description="Room created successfully",
+            examples={
+                "application/json": {
+                    "message": "Room created successfully",
+                    "room": {"room_name": "general"}
+                }
+            }
+        ),
+        400: "Bad request - room_name is required"
+    },
+    tags=['Chat Rooms']
+)
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_chat_room(request):
     """
-    demos = [
-        {
-            'name': 'Chat Room',
-            'url': '/chat/',
-            'description': 'Real-time multi-user chat',
-            'features': ['Message broadcasting', 'User join/leave notifications', 'Room-based grouping']
-        },
-        {
-            'name': 'Notifications',
-            'url': '/notifications/',
-            'description': 'Real-time notifications',
-            'features': ['Server-to-client messaging', 'User-specific notifications', 'Priority levels']
-        },
-        {
-            'name': 'Counter',
-            'url': '/counter/',
-            'description': 'Synchronized real-time counter',
-            'features': ['Synchronized state', 'Increment/Decrement', 'Global counter']
-        },
-    ]
-    
-    context = {
-        'page_title': 'WebSocket Demos',
-        'demos': demos,
-    }
-    
-    return render(request, 'core/index.html', context)
+    Create a new chat room with an optional initial message.
+    """
+    try:
+        room_name = request.data.get('room_name')
+        initial_message = request.data.get('initial_message', 'Room created')
+        
+        if not room_name:
+            return Response({
+                'error': 'room_name is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Create initial chat entry
+        chat = Chat.objects.create(
+            room_name=room_name,
+            message=initial_message
+        )
+        
+        return Response({
+            'message': 'Room created successfully',
+            'room': {
+                'room_name': chat.room_name
+            }
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ============================================================================
+# CHAT HISTORY API ENDPOINTS
+# ============================================================================
+
+@swagger_auto_schema(
+    method='get',
+    operation_description="Get chat history for a specific room",
+    manual_parameters=[
+        openapi.Parameter(
+            'room_name',
+            openapi.IN_PATH,
+            description="Name of the chat room",
+            type=openapi.TYPE_STRING,
+            required=True
+        ),
+        openapi.Parameter(
+            'limit',
+            openapi.IN_QUERY,
+            description="Number of messages to return (default: 50)",
+            type=openapi.TYPE_INTEGER,
+            required=False
+        ),
+        openapi.Parameter(
+            'offset',
+            openapi.IN_QUERY,
+            description="Offset for pagination (default: 0)",
+            type=openapi.TYPE_INTEGER,
+            required=False
+        )
+    ],
+    responses={
+        200: openapi.Response(
+            description="Chat history retrieved successfully",
+            examples={
+                "application/json": {
+                    "room_name": "general",
+                    "messages": [
+                        {
+                            "id": 1,
+                            "user_id": 1,
+                            "user_email": "user@example.com",
+                            "username": "john",
+                            "message": "Hello!",
+                            "timestamp": "2026-02-02T10:00:00Z"
+                        }
+                    ],
+                    "count": 1,
+                    "total": 10
+                }
+            }
+        )
+    },
+    tags=['Chat History']
+)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_chat_history(request, room_name):
+    """
+    Get chat message history for a specific room with pagination.
+    """
+    try:
+        limit = int(request.GET.get('limit', 50))
+        offset = int(request.GET.get('offset', 0))
+        
+        # Fetch messages for the room
+        messages = ChatMessage.objects.filter(
+            room_name=room_name
+        ).select_related('user').order_by('-timestamp')[offset:offset+limit]
+        
+        # Serialize messages
+        message_data = [
+            {
+                'id': msg.id,
+                'user_id': msg.user.id if msg.user else None,
+                'user_email': msg.user.email if msg.user else None,
+                'username': msg.user_name,
+                'message': msg.message,
+                'timestamp': msg.timestamp.isoformat()
+            }
+            for msg in messages
+        ]
+        
+        # Reverse to get chronological order
+        message_data.reverse()
+        
+        return Response({
+            'room_name': room_name,
+            'messages': message_data,
+            'count': len(message_data),
+            'total': ChatMessage.objects.filter(room_name=room_name).count()
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='delete',
+    operation_description="Delete all chat history for a specific room (requires authentication)",
+    manual_parameters=[
+        openapi.Parameter(
+            'room_name',
+            openapi.IN_PATH,
+            description="Name of the chat room",
+            type=openapi.TYPE_STRING,
+            required=True
+        )
+    ],
+    responses={
+        200: openapi.Response(
+            description="Chat history deleted successfully",
+            examples={
+                "application/json": {
+                    "message": "Successfully deleted 10 messages from general",
+                    "deleted_count": 10
+                }
+            }
+        ),
+        401: "Unauthorized - authentication required"
+    },
+    tags=['Chat History']
+)
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_chat_history(request, room_name):
+    """
+    Delete all chat messages for a specific room.
+    Requires authentication.
+    """
+    try:
+        deleted_count = ChatMessage.objects.filter(room_name=room_name).delete()[0]
+        
+        return Response({
+            'message': f'Successfully deleted {deleted_count} messages from {room_name}',
+            'deleted_count': deleted_count
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ============================================================================
+# WEBSOCKET CONNECTION INFO API
+# ============================================================================
+
+@swagger_auto_schema(
+    method='get',
+    operation_description="Get WebSocket connection information for a chat room",
+    manual_parameters=[
+        openapi.Parameter(
+            'room_name',
+            openapi.IN_PATH,
+            description="Name of the chat room",
+            type=openapi.TYPE_STRING,
+            required=True
+        )
+    ],
+    responses={
+        200: openapi.Response(
+            description="WebSocket connection info",
+            examples={
+                "application/json": {
+                    "room_name": "general",
+                    "websocket_url": "ws://localhost:8000/ws/chat/general/",
+                    "connection_info": {
+                        "protocol": "ws",
+                        "host": "localhost:8000",
+                        "path": "/ws/chat/general/"
+                    }
+                }
+            }
+        )
+    },
+    tags=['WebSocket']
+)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_websocket_info(request, room_name):
+    """
+    Get WebSocket connection information for a specific chat room.
+    """
+    try:
+        ws_scheme = 'wss' if request.is_secure() else 'ws'
+        host = request.get_host()
+        ws_path = f'/ws/chat/{room_name}/'
+        ws_url = f'{ws_scheme}://{host}{ws_path}'
+        
+        return Response({
+            'room_name': room_name,
+            'websocket_url': ws_url,
+            'connection_info': {
+                'protocol': ws_scheme,
+                'host': host,
+                'path': ws_path
+            },
+            'message_format': {
+                'send': {
+                    'message': 'Your message here',
+                    'username': 'your_username',
+                    'user_id': 'optional_user_id'
+                },
+                'receive': {
+                    'type': 'chat_message',
+                    'message': 'Message content',
+                    'username': 'sender_username',
+                    'timestamp': 'ISO format timestamp'
+                }
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
