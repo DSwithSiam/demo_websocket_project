@@ -23,7 +23,7 @@ daphne==4.0.0
 asgiref==3.7.1
 
 # REST Framework
-djangorestframework==3.14.0
+djangorestframework==3.15.2
 
 # JWT Authentication
 djangorestframework-simplejwt==5.3.0
