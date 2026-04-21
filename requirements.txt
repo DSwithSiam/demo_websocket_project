@@ -42,7 +42,7 @@ channels-redis==4.1.0  # Uncomment for production
 # mysqlclient==2.2.0      # MySQL
 
 # Environment variables
-python-dotenv==1.0.0
+python-dotenv==1.2.2
 
 # Production server (optional)
 gunicorn==21.2.0
